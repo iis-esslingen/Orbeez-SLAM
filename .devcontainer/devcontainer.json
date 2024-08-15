@@ -1,0 +1,13 @@
+{
+    "dockerComposeFile": "docker-compose.yml",
+    "service": "container",
+    "overrideCommand": true,
+    "initializeCommand": [
+        "/bin/bash", "-c", ".devcontainer/initialize_command"
+    ],
+    "workspaceFolder": "/workspace",
+    "remoteUser": "root",
+    "runArgs": [
+        "--gpus=all"
+    ]
+}
