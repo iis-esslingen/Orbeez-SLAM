@@ -5,7 +5,9 @@ dates=("2023-08-18" "2023-09-15" "2024-01-13" "2024-04-11" "2024-05-29_1" "2024-
 for date in "${dates[@]}"; do
     echo "Processing date: $date"
 
-    for trial in $(seq 0 10); do
+    trials=("0" "1" "2" "3" "4")
+
+    for trial in "${trials[@]}"; do
         echo "  Trial: $trial"
 
         ./build/mono_stihl \

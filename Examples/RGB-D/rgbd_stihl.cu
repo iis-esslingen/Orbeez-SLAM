@@ -26,6 +26,8 @@
 #include <sys/wait.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <errno.h>
+#include <string.h>
 
 #include <opencv2/core/core.hpp>
 #include <opencv2/imgcodecs/legacy/constants_c.h>
@@ -254,21 +256,43 @@ string GetDatasetName(const string &strSequencePath)
 
 void EnsureDirectoryExists(const std::string &directoryPath) 
 {
-    struct stat info;
+    std::string partialPath = "";
+    std::size_t pos = 0;
+    std::size_t found;
 
-    // Check if the directory exists
-    if (stat(directoryPath.c_str(), &info) != 0) {
-        // Directory does not exist, attempt to create it
+    // Create each directory in the path if it doesn't exist
+    while ((found = directoryPath.find('/', pos)) != std::string::npos) {
+        partialPath = directoryPath.substr(0, found);
+        pos = found + 1;
+
+        // Skip empty parts
+        if (partialPath.empty()) continue;
+
+        // Check if this part of the path exists
+        struct stat info;
+        if (stat(partialPath.c_str(), &info) != 0) {
+            // Directory does not exist, attempt to create it
+            if (mkdir(partialPath.c_str(), 0755) != 0 && errno != EEXIST) {
+                std::cerr << "Error creating directory: " << partialPath << " - " << strerror(errno) << std::endl;
+                return;
+            }
+        } else if (!(info.st_mode & S_IFDIR)) {
+            std::cerr << "Path exists but is not a directory: " << partialPath << std::endl;
+            return;
+        }
+    }
+
+    // Create the final directory if it's not already created
+    struct stat finalInfo;
+    if (stat(directoryPath.c_str(), &finalInfo) != 0) {
         if (mkdir(directoryPath.c_str(), 0755) == 0) {
             std::cout << "Directory created: " << directoryPath << std::endl;
         } else {
-            std::cerr << "Error creating directory: " << directoryPath << std::endl;
+            std::cerr << "Error creating directory: " << directoryPath << " - " << strerror(errno) << std::endl;
         }
-    } else if (info.st_mode & S_IFDIR) {
-        // Directory exists
+    } else if (finalInfo.st_mode & S_IFDIR) {
         std::cout << "Directory already exists: " << directoryPath << std::endl;
     } else {
-        // Path exists but is not a directory
         std::cerr << "Path exists but is not a directory: " << directoryPath << std::endl;
     }
 }
