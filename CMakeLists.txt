@@ -260,6 +260,11 @@ target_link_libraries(mono_tum ORBEEZ ngp tiny-cuda-nn)
 target_compile_options(mono_tum PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:${CUDA_NVCC_FLAGS}>)
 target_compile_definitions(mono_tum PUBLIC ${ORBEEZ_DEFINITIONS})
 
+add_executable(mono_stihl Examples/Monocular/mono_stihl.cu)
+target_link_libraries(mono_stihl ORBEEZ ngp tiny-cuda-nn)
+target_compile_options(mono_stihl PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:${CUDA_NVCC_FLAGS}>)
+target_compile_definitions(mono_stihl PUBLIC ${ORBEEZ_DEFINITIONS})
+
 add_executable(mono_replica Examples/Monocular/mono_replica.cu)
 target_link_libraries(mono_replica ORBEEZ ngp tiny-cuda-nn)
 target_compile_options(mono_replica PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:${CUDA_NVCC_FLAGS}>)
@@ -275,6 +280,11 @@ add_executable(rgbd_tum Examples/RGB-D/rgbd_tum.cu)
 target_link_libraries(rgbd_tum ORBEEZ ngp tiny-cuda-nn)
 target_compile_options(rgbd_tum PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:${CUDA_NVCC_FLAGS}>)
 target_compile_definitions(rgbd_tum PUBLIC ${ORBEEZ_DEFINITIONS})
+
+add_executable(rgbd_stihl Examples/RGB-D/rgbd_stihl.cu)
+target_link_libraries(rgbd_stihl ORBEEZ ngp tiny-cuda-nn)
+target_compile_options(rgbd_stihl PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:${CUDA_NVCC_FLAGS}>)
+target_compile_definitions(rgbd_stihl PUBLIC ${ORBEEZ_DEFINITIONS})
 
 add_executable(rgbd_replica Examples/RGB-D/rgbd_replica.cu)
 target_link_libraries(rgbd_replica ORBEEZ ngp tiny-cuda-nn)

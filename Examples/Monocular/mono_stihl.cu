@@ -24,49 +24,41 @@
 #include<fstream>
 #include<chrono>
 #include <sys/wait.h>
-#include <regex>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include<unistd.h>
 
 #include<opencv2/core/core.hpp>
 #include<opencv2/imgcodecs/legacy/constants_c.h>
 
 #include<System.h>
 
+// #define COMPILEDWITHC11 // Hack through this
 using namespace std;
 
-void LoadImages(const string &strAssociationFilename, vector<string> &vstrImageFilenamesRGB,
-                vector<string> &vstrImageFilenamesD, vector<double> &vTimestamps);
+void LoadImages(const string &strFile, vector<string> &vstrImageFilenames,
+                vector<double> &vTimestamps);
 string GetDatasetName(const string &strSequencePath);
+void EnsureDirectoryExists(const std::string &directoryPath);
 
 int main(int argc, char **argv)
 {
     if(argc != 5)
     {
-        cerr << endl << "Usage: ./rgbd_tum path_to_vocabulary path_to_settings path_to_sequence path_to_association" << endl;
+        cerr << endl << "Usage: ./mono_stihl path_to_vocabulary path_to_settings path_to_sequence path_to_output_dir" << endl;
         return 1;
     }
 
     // Retrieve paths to images
-    vector<string> vstrImageFilenamesRGB;
-    vector<string> vstrImageFilenamesD;
+    vector<string> vstrImageFilenames;
     vector<double> vTimestamps;
-    string strAssociationFilename = string(argv[4]);
-    LoadImages(strAssociationFilename, vstrImageFilenamesRGB, vstrImageFilenamesD, vTimestamps);
+    string strFile = string(argv[3])+"/rgb.txt";
+    LoadImages(strFile, vstrImageFilenames, vTimestamps);
 
-    // Check consistency in the number of images and depthmaps
-    int nImages = vstrImageFilenamesRGB.size();
-    if(vstrImageFilenamesRGB.empty())
-    {
-        cerr << endl << "No images found in provided path." << endl;
-        return 1;
-    }
-    else if(vstrImageFilenamesD.size()!=vstrImageFilenamesRGB.size())
-    {
-        cerr << endl << "Different number of images for rgb and depth." << endl;
-        return 1;
-    }
+    int nImages = vstrImageFilenames.size();
 
     // Create SLAM system. It initializes all system threads and gets ready to process frames.
-    ORBEEZ::System SLAM(argv[1],argv[2],ORBEEZ::System::RGBD, true, false);
+    ORBEEZ::System SLAM(argv[1],argv[2],ORBEEZ::System::MONOCULAR,true);
 
     // Vector for tracking time statistics
     vector<float> vTimesTrack;
@@ -77,18 +69,17 @@ int main(int argc, char **argv)
     cout << "Images in the sequence: " << nImages << endl << endl;
 
     // Main loop
-    cv::Mat imRGB, imD;
+    cv::Mat im;
     for(int ni=0; ni<nImages; ni++)
     {
-        // Read image and depthmap from file
-        imRGB = cv::imread(string(argv[3])+"/"+vstrImageFilenamesRGB[ni],CV_LOAD_IMAGE_UNCHANGED);
-        imD = cv::imread(string(argv[3])+"/"+vstrImageFilenamesD[ni],CV_LOAD_IMAGE_UNCHANGED);
+        // Read image from file
+        im = cv::imread(string(argv[3])+"/"+vstrImageFilenames[ni],CV_LOAD_IMAGE_UNCHANGED);
         double tframe = vTimestamps[ni];
 
-        if(imRGB.empty())
+        if(im.empty())
         {
             cerr << endl << "Failed to load image at: "
-                 << string(argv[3]) << "/" << vstrImageFilenamesRGB[ni] << endl;
+                 << string(argv[3]) << "/" << vstrImageFilenames[ni] << endl;
             return 1;
         }
 
@@ -96,12 +87,11 @@ int main(int argc, char **argv)
         std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
 
         // Pass the image to the SLAM system
-        SLAM.TrackRGBD(imRGB,imD,tframe);
+        SLAM.TrackMonocular(im,tframe);
 
         std::chrono::steady_clock::time_point t2 = std::chrono::steady_clock::now();
 
         double ttrack= std::chrono::duration_cast<std::chrono::duration<double> >(t2 - t1).count();
-
         vTimesTrack[ni]=ttrack;
 
         // Wait to load the next frame
@@ -130,13 +120,15 @@ int main(int argc, char **argv)
     cout << "median tracking time: " << vTimesTrack[nImages/2] << endl;
     cout << "mean tracking time: " << totaltime/nImages << endl;
 
-    string dataset_name = GetDatasetName(string(argv[3])); 
-    auto trajString = "evaluation/RGBD_TUM_"+dataset_name+"_KeyFrameTrajectory";
-    auto snapString = "evaluation/RGBD_TUM_"+dataset_name+".msgpack";
-    auto gtJsonTrajString = "evaluation/RGBD_TUM_"+dataset_name+"_gtTraj.json";
+    // string dataset_name = GetDatasetName(string(argv[3])); 
+    auto trajString = string(argv[4]) + "/KeyFrameTrajectory";
+    auto snapString = string(argv[4]) + "/snap.msgpack";
+    auto gtJsonTrajString = string(argv[4]) + "/gtTraj.json";
+
+    EnsureDirectoryExists(string(argv[4]));
 
     // Save camera trajectory
-    SLAM.SaveTrajectoryTUM("evaluation/RGBD_TUM_"+dataset_name+"_CameraTrajectory.txt");
+    SLAM.SaveTrajectoryTUM(string(argv[4]) + "/CameraTrajectory.txt");
     SLAM.SaveKeyFrameTrajectoryTUM(trajString+".txt");  // rpj only
     SLAM.SaveKeyFrameTrajectoryNGP(trajString+".json"); // rpj (+ pht if train extrinsics) 
     SLAM.SaveSnapShot(snapString);
@@ -146,13 +138,13 @@ int main(int argc, char **argv)
     {
         cout << "fork failed" << endl;
     }
-    else if( pid == 0 )
+    else if (pid == 0)
     {
         // For headless version, we do not need to spin the program.
         // But instead, terminate training process and execute evaluation script.
         auto gtString = string(argv[3]) + "/groundtruth.txt";
         auto trajPathString = trajString + ".txt";
-        auto plotString = trajString + "_rpj.png";
+        auto plotString = trajString + ".png";
         char *gtPath = (char *)(gtString.c_str());
         char *trajPath = (char *)(trajPathString.c_str());
         char *plotPath = (char *)(plotString.c_str());
@@ -163,7 +155,7 @@ int main(int argc, char **argv)
         execvp("python3", execArgs);
     }
     wait(NULL);
-
+    
     std::cout << std::endl;
 
     pid = fork();
@@ -189,44 +181,43 @@ int main(int argc, char **argv)
     wait(NULL);
 
 #ifdef ORBEEZ_GUI
-    SLAM.AddGroundTruthTraj(gtJsonTrajString);
-
     cout << "Press ctrl + c to exit the program " << endl;
 
     // Don't stop program, to see the Nerf training result
-    volatile int keep_spinning = 0;
+    volatile int keep_spinning = 1;
     while (keep_spinning) ; // spin
-#endif        
+#endif  
 
     return 0;
 }
 
-void LoadImages(const string &strAssociationFilename, vector<string> &vstrImageFilenamesRGB,
-                vector<string> &vstrImageFilenamesD, vector<double> &vTimestamps)
+void LoadImages(const string &strFile, vector<string> &vstrImageFilenames, vector<double> &vTimestamps)
 {
-    ifstream fAssociation;
-    fAssociation.open(strAssociationFilename.c_str());
-    while(!fAssociation.eof())
+    ifstream f;
+    f.open(strFile.c_str());
+
+    // skip first three lines
+    string s0;
+    getline(f,s0);
+    getline(f,s0);
+    getline(f,s0);
+
+    while(!f.eof())
     {
         string s;
-        getline(fAssociation,s);
+        getline(f,s);
         if(!s.empty())
         {
             stringstream ss;
             ss << s;
             double t;
-            string sRGB, sD;
+            string sRGB;
             ss >> t;
             vTimestamps.push_back(t);
             ss >> sRGB;
-            vstrImageFilenamesRGB.push_back(sRGB);
-            ss >> t;
-            ss >> sD;
-            vstrImageFilenamesD.push_back(sD);
-
+            vstrImageFilenames.push_back(sRGB);
         }
     }
-
 }
 
 string GetDatasetName(const string &strSequencePath) 
@@ -245,4 +236,25 @@ string GetDatasetName(const string &strSequencePath)
         return token;
     else
         return s;
+}
+
+void EnsureDirectoryExists(const std::string &directoryPath) 
+{
+    struct stat info;
+
+    // Check if the directory exists
+    if (stat(directoryPath.c_str(), &info) != 0) {
+        // Directory does not exist, attempt to create it
+        if (mkdir(directoryPath.c_str(), 0755) == 0) {
+            std::cout << "Directory created: " << directoryPath << std::endl;
+        } else {
+            std::cerr << "Error creating directory: " << directoryPath << std::endl;
+        }
+    } else if (info.st_mode & S_IFDIR) {
+        // Directory exists
+        std::cout << "Directory already exists: " << directoryPath << std::endl;
+    } else {
+        // Path exists but is not a directory
+        std::cerr << "Path exists but is not a directory: " << directoryPath << std::endl;
+    }
 }
