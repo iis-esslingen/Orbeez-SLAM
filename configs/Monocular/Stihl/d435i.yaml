@@ -6,38 +6,40 @@
 
 # Camera calibration and distortion parameters (OpenCV) 
 Camera:
-  fx: 535.4
-  fy: 539.2
-  cx: 320.1
-  cy: 247.6
-  k1: 0.0
-  k2: 0.0
-  p1: 0.0
-  p2: 0.0
+  fx: 596.1950425915236
+  fy: 593.1411835433107
+  cx: 327.0463454538411
+  cy: 245.16142133264628
+  k1: 0.07561607662577634
+  k2: -0.2088729975389971
+  p1: -0.0023347441072184756
+  p2: 0.004010356017731083
+  k3: 0.0
   width: 640
-  height: 480
-# Camera frames per second 
-  fps: 30.0
+  height: 480 
+# Camera frames per second
+  fps: 30.0 
 # Color order of the images (0: BGR, 1: RGB. It is ignored if images are grayscale)
   RGB: 1
 
-#--------------------------------------------------------------------------------------------
+  #--------------------------------------------------------------------------------------------
 # ORB Parameters
 #--------------------------------------------------------------------------------------------
 
-# ORB Extractor: Number of features per image
+
 ORBextractor:
-  nFeatures: 1200
-# ORB Extractor: Scale factor between levels in the scale pyramid 	
-  scaleFactor: 1.2
-# ORB Extractor: Number of levels in the scale pyramid	
+# ORB Extractor: Number of features per image
+  nFeatures: 1200          
+# ORB Extractor: Scale factor between levels in the scale pyramid      
+  scaleFactor: 1.2 
+# ORB Extractor: Number of levels in the scale pyramid
   nLevels: 8
 # ORB Extractor: Fast threshold
 # Image is divided in a grid. At each cell FAST are extracted imposing a minimum response.
 # Firstly we impose iniThFAST. If no corners are detected we impose a lower value minThFAST
-# You can lower these values if your images have low contrast			
-  iniThFAST: 10
-  minThFAST: 5
+# You can lower these values if your images have low contrast     
+  iniThFAST: 20
+  minThFAST: 7
 
 #--------------------------------------------------------------------------------------------
 # NeRF Parameters
@@ -45,6 +47,5 @@ ORBextractor:
 NeRF:
   aabb_scale: 4
   scale: 0.33
-  offset: [0.5, 0.6, -0.5]
+  offset: [0.7, 0.5, 0.1]
   network_config_path: "./Thirdparty/instant-ngp-kf/configs/nerf/base.json"
-

@@ -29,7 +29,7 @@ def parse_args():
 
     parser = argparse.ArgumentParser(description="Run neural graphics primitives testbed with additional configuration & output options")
     parser.add_argument("--dataset_dir", default="./Replica/office0", help="The directory of the dataset.")
-    parser.add_argument("--dataset_type", default="Replica", choices=["Replica", "ScanNet"])
+    parser.add_argument("--dataset_type", default="Replica", choices=["Replica", "ScanNet", "TUM"])
     parser.add_argument("--dataset_config", default="configs/RGB-D/Replica/office0.yaml", help="Path to the scene yaml config.")
     parser.add_argument("--out_dir", help="Save the render images and infos", required=True)
     parser.add_argument("--load_snapshot", default="", help="Load this snapshot before training. recommended extension: .msgpack", required=True)
@@ -130,48 +130,48 @@ def load_scannet(config, args):
     return datas
 
 def load_tum(config, args):
-    raise NotImplementedError("There is no specific gt image for the timestamp of gt traj")
-    # Two = np.identity(4, dtype=float)
+    # raise NotImplementedError("There is no specific gt image for the timestamp of gt traj")
+    Two = np.identity(4, dtype=float)
     
-    # transforms = []
-    # frames = []
-    # depths = []
+    transforms = []
+    frames = []
+    depths = []
 
-    # with open(args.dataset_dir + "/groundtruth.txt", "r") as f:
-    #     lines=f.readlines()
-    #     for i, line in enumerate(lines[3:]):
-    #         xform_array = np.fromstring(line, dtype=float, sep=' ')
-    #         t = xform_array[1:4]
-    #         rot = R.from_quat(xform_array[4:]).as_matrix()
-    #         xform_mat = np.identity(4, dtype=float)
-    #         xform_mat[:3,:3] = rot
-    #         xform_mat[:3, 3] = t
+    with open(args.dataset_dir + "/groundtruth.txt", "r") as f:
+        lines=f.readlines()
+        for i, line in enumerate(lines[3:]):
+            xform_array = np.fromstring(line, dtype=float, sep=' ')
+            t = xform_array[1:4]
+            rot = R.from_quat(xform_array[4:]).as_matrix()
+            xform_mat = np.identity(4, dtype=float)
+            xform_mat[:3,:3] = rot
+            xform_mat[:3, 3] = t
 
-    #         if i == 0:
-    #             # set first frame to origin
-    #             R_inv = np.linalg.inv(xform_mat[:3,:3])
-    #             t_inv = -R_inv @ xform_mat[:3,3]
-    #             Two[:3,:3] = R_inv 
-    #             Two[:3,3] = t_inv
+            if i == 0:
+                # set first frame to origin
+                R_inv = np.linalg.inv(xform_mat[:3,:3])
+                t_inv = -R_inv @ xform_mat[:3,3]
+                Two[:3,:3] = R_inv 
+                Two[:3,3] = t_inv
 
-    #         # transform to origin coordinate
-    #         xform_mat =  Two @ xform_mat
+            # transform to origin coordinate
+            xform_mat =  Two @ xform_mat
 
-    #         #transform to nerf coordinate (load dataset will do this)
-    #         #xform_mat[:3,3] = xform_mat[:3,3] * scale + offset
-    #         transforms.append(xform_mat)
+            #transform to nerf coordinate (load dataset will do this)
+            #xform_mat[:3,3] = xform_mat[:3,3] * scale + offset
+            transforms.append(xform_mat)
 
-    # for file_name in sorted(glob.glob(args.dataset_dir +"/rgb/*.png")):
-    #     frames.append(file_name)
+    for file_name in sorted(glob.glob(args.dataset_dir +"/rgb/*.png")):
+        frames.append(file_name)
 
-    # for file_name in sorted(glob.glob(args.dataset_dir +"/depth/*.png")):
-    #     depths.append(file_name)
+    for file_name in sorted(glob.glob(args.dataset_dir +"/depth/*.png")):
+        depths.append(file_name)
     
-    # datas = []
-    # for xform, frame, depth in zip(transforms, frames, depths):
-    #     datas.append({"xform":xform, "frame_path": frame, "depth_path":depth})
+    datas = []
+    for xform, frame, depth in zip(transforms, frames, depths):
+        datas.append({"xform":xform, "frame_path": frame, "depth_path":depth})
 
-    # return datas
+    return datas
 
 def to_angle(r, x):
     return 2 * 180 / math.pi * math.atan(r/(2*x))

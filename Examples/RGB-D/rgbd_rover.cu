@@ -19,29 +19,33 @@
 */
 
 
-#include<iostream>
-#include<algorithm>
-#include<fstream>
-#include<chrono>
+#include <iostream>
+#include <algorithm>
+#include <fstream>
+#include <chrono>
 #include <sys/wait.h>
-#include <regex>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <errno.h>
+#include <string.h>
 
-#include<opencv2/core/core.hpp>
-#include<opencv2/imgcodecs/legacy/constants_c.h>
+#include <opencv2/core/core.hpp>
+#include <opencv2/imgcodecs/legacy/constants_c.h>
 
-#include<System.h>
+#include <System.h>
 
 using namespace std;
 
 void LoadImages(const string &strAssociationFilename, vector<string> &vstrImageFilenamesRGB,
                 vector<string> &vstrImageFilenamesD, vector<double> &vTimestamps);
 string GetDatasetName(const string &strSequencePath);
+void EnsureDirectoryExists(const std::string &directoryPath);
 
 int main(int argc, char **argv)
 {
-    if(argc != 5)
+    if(argc != 6)
     {
-        cerr << endl << "Usage: ./rgbd_tum path_to_vocabulary path_to_settings path_to_sequence path_to_association" << endl;
+        cerr << endl << "Usage: ./rgbd_stihl path_to_vocabulary path_to_settings path_to_sequence path_to_association path_to_output_dir" << endl;
         return 1;
     }
 
@@ -129,14 +133,18 @@ int main(int argc, char **argv)
     cout << "-------" << endl << endl;
     cout << "median tracking time: " << vTimesTrack[nImages/2] << endl;
     cout << "mean tracking time: " << totaltime/nImages << endl;
+    cout << "mean fps: " << nImages/totaltime << endl;
 
-    string dataset_name = GetDatasetName(string(argv[3])); 
-    auto trajString = "evaluation/RGBD_TUM_"+dataset_name+"_KeyFrameTrajectory";
-    auto snapString = "evaluation/RGBD_TUM_"+dataset_name+".msgpack";
-    auto gtJsonTrajString = "evaluation/RGBD_TUM_"+dataset_name+"_gtTraj.json";
+    // string dataset_name = GetDatasetName(string(argv[3])); 
+    // auto trajString = "evaluation/RGBD_STIHL_"+dataset_name+"_KeyFrameTrajectory";
+    auto trajString = string(argv[5]) + "/KeyFrameTrajectory";
+    auto snapString = string(argv[5]) + "/snap.msgpack";
+    auto gtJsonTrajString = string(argv[5]) + "/gtTraj.json";
+
+    EnsureDirectoryExists(string(argv[5]));
 
     // Save camera trajectory
-    SLAM.SaveTrajectoryTUM("evaluation/RGBD_TUM_"+dataset_name+"_CameraTrajectory.txt");
+    SLAM.SaveTrajectoryTUM(string(argv[5]) + "/CameraTrajectory.txt");
     SLAM.SaveKeyFrameTrajectoryTUM(trajString+".txt");  // rpj only
     SLAM.SaveKeyFrameTrajectoryNGP(trajString+".json"); // rpj (+ pht if train extrinsics) 
     SLAM.SaveSnapShot(snapString);
@@ -245,4 +253,47 @@ string GetDatasetName(const string &strSequencePath)
         return token;
     else
         return s;
+}
+
+void EnsureDirectoryExists(const std::string &directoryPath) 
+{
+    std::string partialPath = "";
+    std::size_t pos = 0;
+    std::size_t found;
+
+    // Create each directory in the path if it doesn't exist
+    while ((found = directoryPath.find('/', pos)) != std::string::npos) {
+        partialPath = directoryPath.substr(0, found);
+        pos = found + 1;
+
+        // Skip empty parts
+        if (partialPath.empty()) continue;
+
+        // Check if this part of the path exists
+        struct stat info;
+        if (stat(partialPath.c_str(), &info) != 0) {
+            // Directory does not exist, attempt to create it
+            if (mkdir(partialPath.c_str(), 0755) != 0 && errno != EEXIST) {
+                std::cerr << "Error creating directory: " << partialPath << " - " << strerror(errno) << std::endl;
+                return;
+            }
+        } else if (!(info.st_mode & S_IFDIR)) {
+            std::cerr << "Path exists but is not a directory: " << partialPath << std::endl;
+            return;
+        }
+    }
+
+    // Create the final directory if it's not already created
+    struct stat finalInfo;
+    if (stat(directoryPath.c_str(), &finalInfo) != 0) {
+        if (mkdir(directoryPath.c_str(), 0755) == 0) {
+            std::cout << "Directory created: " << directoryPath << std::endl;
+        } else {
+            std::cerr << "Error creating directory: " << directoryPath << " - " << strerror(errno) << std::endl;
+        }
+    } else if (finalInfo.st_mode & S_IFDIR) {
+        std::cout << "Directory already exists: " << directoryPath << std::endl;
+    } else {
+        std::cerr << "Path exists but is not a directory: " << directoryPath << std::endl;
+    }
 }
