@@ -133,6 +133,7 @@ int main(int argc, char **argv)
     cout << "-------" << endl << endl;
     cout << "median tracking time: " << vTimesTrack[nImages/2] << endl;
     cout << "mean tracking time: " << totaltime/nImages << endl;
+    cout << "mean fps: " << nImages/totaltime << endl;
 
     // string dataset_name = GetDatasetName(string(argv[3])); 
     // auto trajString = "evaluation/RGBD_STIHL_"+dataset_name+"_KeyFrameTrajectory";

@@ -184,7 +184,7 @@ int main(int argc, char **argv)
     cout << "Press ctrl + c to exit the program " << endl;
 
     // Don't stop program, to see the Nerf training result
-    volatile int keep_spinning = 1;
+    volatile int keep_spinning = 0;
     while (keep_spinning) ; // spin
 #endif  
 
