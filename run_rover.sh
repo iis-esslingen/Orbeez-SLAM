@@ -11,17 +11,17 @@ for date in "${dates[@]}"; do
     for trial in "${trials[@]}"; do
         echo "  Trial: $trial"
 
-        # ./build/mono_stihl \
+        # ./build/mono_rover \
         #     ./Vocabulary/ORBvoc.txt \
-        #     ./configs/Monocular/Stihl/d435i.yaml \
+        #     ./configs/Monocular/ROVER/d435i.yaml \
         #     "/workspace/mounted_directory/media/fabian/data_recording_r/kwald/drosselweg/flaeche1/$date/tum/d435i" \
         #     "./evaluation/mono/$date/$trial"
 
-        ./build/rgbd_stihl \
+        ./build/rgbd_rover \
             ./Vocabulary/ORBvoc.txt \
-            ./configs/RGB-D/Stihl/d435i.yaml \
+            ./configs/RGB-D/ROVER/d435i.yaml \
             "/workspace/mounted_directory/media/fabian/data_recording_r/kwald/drosselweg/flaeche1/$date/tum/d435i" \
-            "/workspace/orbeez-slam/configs/RGB-D/Stihl/associations/$date.txt" \
+            "/workspace/orbeez-slam/configs/RGB-D/ROVER/associations/$date.txt" \
             "./evaluation/rgbd/$date/$trial"
     done
 done
