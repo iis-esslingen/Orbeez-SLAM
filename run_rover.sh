@@ -1,7 +1,6 @@
 #!/bin/bash
 
-# dates=("2023-08-18" "2023-09-15" "2024-01-13" "2024-04-11" "2024-05-29_1" "2024-05-29_2" "2024-05-29_3")
-dates=("2024-05-29_4")
+dates=("2023-08-18" "2023-09-15" "2024-01-13" "2024-04-11" "2024-05-29_1" "2024-05-29_2" "2024-05-29_3")
 
 for date in "${dates[@]}"; do
     echo "Processing date: $date"
@@ -11,17 +10,17 @@ for date in "${dates[@]}"; do
     for trial in "${trials[@]}"; do
         echo "  Trial: $trial"
 
-        # ./build/mono_rover \
-        #     ./Vocabulary/ORBvoc.txt \
-        #     ./configs/Monocular/ROVER/d435i.yaml \
-        #     "/workspace/mounted_directory/media/fabian/data_recording_r/kwald/drosselweg/flaeche1/$date/tum/d435i" \
-        #     "./evaluation/mono/$date/$trial"
+        ./build/mono_rover \
+            ./Vocabulary/ORBvoc.txt \
+            ./configs/Monocular/ROVER/d435i.yaml \
+            "/workspace/mounted_directory/$date/d435i" \
+            "./evaluation/mono/$date/$trial"
 
         ./build/rgbd_rover \
             ./Vocabulary/ORBvoc.txt \
             ./configs/RGB-D/ROVER/d435i.yaml \
-            "/workspace/mounted_directory/media/fabian/data_recording_r/kwald/drosselweg/flaeche1/$date/tum/d435i" \
-            "/workspace/orbeez-slam/configs/RGB-D/ROVER/associations/$date.txt" \
+            "/workspace/mounted_directory/$date/d435i" \
+            "/workspace/mounted_directory/$date/d435i/associations.txt" \
             "./evaluation/rgbd/$date/$trial"
     done
 done
